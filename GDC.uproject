@@ -1,0 +1,16 @@
+{
+	"FileVersion": 3,
+	"EngineAssociation": "{B0DD67D2-4EDC-44E2-B43A-AE98261F94F9}",
+	"Category": "",
+	"Description": "",
+	"Modules": [
+		{
+			"Name": "GDC",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"AdditionalDependencies": [
+				"Engine"
+			]
+		}
+	]
+}
