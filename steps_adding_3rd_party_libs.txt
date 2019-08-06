@@ -1,0 +1,95 @@
+1. create an empty plugin(For loading dlls; it's possible that we don't need plugin if it's a static lib, but I'm not sure)
+code: 
+void FopencvModule::StartupModule()
+{
+	// This code will execute after your module is loaded into memory; the exact timing is specified in the .uplugin file per-module
+
+	// Get the base directory of this plugin
+	FString BaseDir = IPluginManager::Get().FindPlugin("opencv")->GetBaseDir();
+
+	// Add on the relative location of the third party dll and load it
+	FString LibraryPath;
+#if PLATFORM_WINDOWS
+	LibraryPath = FPaths::Combine(*BaseDir, TEXT("Binaries/ThirdParty/opencvLibrary/Win64/opencv_world411.dll"));
+#elif PLATFORM_MAC
+    LibraryPath = FPaths::Combine(*BaseDir, TEXT("Source/ThirdParty/opencvLibrary/Mac/Release/libExampleLibrary.dylib"));
+#endif // PLATFORM_WINDOWS
+
+	ExampleLibraryHandle = !LibraryPath.IsEmpty() ? FPlatformProcess::GetDllHandle(*LibraryPath) : nullptr;
+
+	if (ExampleLibraryHandle)
+	{
+		// Call the test function in the third party library that opens a message box
+		//ExampleLibraryFunction();
+	}
+	else
+	{
+		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("ThirdPartyLibraryError", "Failed to load example third party library"));
+	}
+}
+
+void FopencvModule::ShutdownModule()
+{
+	// This function may be called during shutdown to clean up your module.  For modules that support dynamic reloading,
+	// we call this function before unloading the module.
+
+	// Free the dll handle
+	FPlatformProcess::FreeDllHandle(ExampleLibraryHandle);
+	ExampleLibraryHandle = nullptr;
+}
+
+
+2: load eveything in project.build.cs
+
+    public bool LoadOpenCV(ReadOnlyTargetRules Target)
+    {
+        // Start OpenCV linking here!
+        bool isLibrarySupported = false;
+
+        // Create OpenCV Path 
+        string OpenCVPath = Path.Combine(ThirdPartyPath, "opencv");
+
+        // Get Library Path 
+        string LibPath = "";
+        string DllPath = "";
+
+        //bool bDebug = (Target.Configuration == UnrealTargetConfiguration.Debug && BuildConfiguration.bDebugBuildsActuallyUseDebugCRT);
+        if (Target.Platform == UnrealTargetPlatform.Win64)
+        {
+            LibPath = Path.Combine(OpenCVPath, "lib");
+            DllPath = Path.Combine(OpenCVPath, "bin");
+            isLibrarySupported = true;
+        }
+        else
+        {
+            string Err = string.Format("{0} dedicated server is made to depend on {1}. We want to avoid this, please correct module dependencies.", Target.Platform.ToString(), this.ToString()); System.Console.WriteLine(Err);
+        }
+
+        if (isLibrarySupported)
+        {
+            //Add Include path 
+            PublicIncludePaths.AddRange(new string[] { Path.Combine(OpenCVPath, "include") });
+
+            // Add Library Path 
+            PublicLibraryPaths.Add(LibPath);
+            PublicLibraryPaths.Add(DllPath);
+
+            //Add Static Libraries
+            PublicAdditionalLibraries.Add("opencv_world411.lib");
+            PublicAdditionalLibraries.Add("opencv_img_hash411.lib");
+
+            //Add Dynamic Libraries
+            PublicDelayLoadDLLs.Add("opencv_world411.dll");
+            PublicDelayLoadDLLs.Add("opencv_img_hash411.dll");
+            PublicDelayLoadDLLs.Add("opencv_videoio_ffmpeg411_64.dll");
+        }
+
+        // Definitions.Add(string.Format("WITH_OPENCV_BINDING={0}", isLibrarySupported ? 1 : 0));
+
+        return isLibrarySupported;
+    }
+
+
+
+
+
